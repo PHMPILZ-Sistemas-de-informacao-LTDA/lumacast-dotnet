@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#071413" />
+    <meta name="description" content="Crie transmissões ao vivo usando a câmera e o microfone do seu dispositivo." />
+    <title>@ViewData["Title"]</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body>
+    @RenderBody()
+    <script src="https://cdn.jsdelivr.net/npm/livekit-client@2.21.0/dist/livekit-client.umd.min.js"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

@@ -1,0 +1,16 @@
+bin/
+obj/
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+TestResults/
+coverage/
+.DS_Store
+appsettings.Local.json
+wwwroot/recordings/
+wwwroot/lib/
+outputs/

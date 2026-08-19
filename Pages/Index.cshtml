@@ -1,0 +1,145 @@
+@page
+@model IndexModel
+@{
+    ViewData["Title"] = "LumaCast — Seu estúdio, em qualquer lugar";
+}
+
+<header class="topbar">
+    <a class="brand" href="#top" aria-label="LumaCast — início">
+        <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+        <span>LumaCast</span>
+    </a>
+    <div class="topbar-actions">
+        <span class="secure-label"><span>●</span> Estúdio privado</span>
+        <a class="help-link" href="#como-funciona">Como funciona</a>
+        <span class="avatar" aria-label="Perfil">PP</span>
+    </div>
+</header>
+
+<main>
+    <section class="studio-shell" id="top">
+        <div class="intro">
+            <div>
+                <p class="eyebrow"><span></span> ESTÚDIO DE TRANSMISSÃO</p>
+                <h1>Sua história, <em>ao vivo.</em></h1>
+            </div>
+            <p class="intro-copy">Entre no ar usando a câmera do seu dispositivo. Sem instalações, sem complicação.</p>
+        </div>
+
+        <div class="studio-grid">
+            <section class="stage" id="stage" aria-label="Prévia da câmera">
+                <video id="cameraPreview" muted playsinline aria-label="Imagem da sua câmera"></video>
+
+                <div class="camera-gate" id="cameraGate">
+                    <div class="camera-orbit" aria-hidden="true"><span class="lens">●</span></div>
+                    <h2 id="gateTitle">Você está quase no ar</h2>
+                    <p id="gateDescription">Permita o acesso para conferir sua imagem e seu áudio antes de começar.</p>
+                    <button class="primary-button" id="activateCamera" type="button">
+                        <span aria-hidden="true">▣</span> Ativar câmera e microfone
+                    </button>
+                    <p class="error-message" id="cameraError" role="alert" hidden></p>
+                    <small><span>✓</span> Sua câmera só é compartilhada quando você entra no ar.</small>
+                </div>
+
+                <div class="live-badge" id="liveBadge" hidden><span></span> AO VIVO <b id="liveTimer">00:00:00</b></div>
+
+                <div class="camera-off-state" id="cameraOffState" hidden>
+                    <span class="avatar large">PP</span>
+                    <p>Câmera pausada</p>
+                </div>
+
+                <div class="stage-controls" id="stageControls">
+                    <button type="button" id="toggleMic" aria-label="Desativar microfone"><span aria-hidden="true">◉</span><b>Microfone</b></button>
+                    <button type="button" id="toggleCamera" aria-label="Desativar câmera"><span aria-hidden="true">▣</span><b>Câmera</b></button>
+                    <button type="button" id="switchCamera" aria-label="Trocar câmera"><span aria-hidden="true">↻</span><b>Trocar</b></button>
+                    <span class="control-spacer"></span>
+                    <button type="button" class="icon-control" id="pictureInPicture" aria-label="Abrir imagem em imagem">▱</button>
+                    <button type="button" class="icon-control" id="fullscreen" aria-label="Abrir tela cheia">⛶</button>
+                </div>
+            </section>
+
+            <aside class="setup-card">
+                <div class="setup-heading">
+                    <div><p>CONFIGURAÇÃO</p><h2>Prepare sua transmissão</h2></div>
+                    <span class="readiness-dot" id="readinessDot" aria-label="Aguardando câmera"></span>
+                </div>
+                <p class="provider-status" id="providerStatus"><span></span> Verificando infraestrutura…</p>
+
+                <label class="field">
+                    <span>Título da transmissão</span>
+                    <input id="streamTitle" value="Conversas que inspiram" maxlength="70" />
+                    <small><span id="titleCount">22</span>/70</small>
+                </label>
+
+                <div class="two-fields">
+                    <label class="field">
+                        <span>Visibilidade</span>
+                        <select id="visibility">
+                            <option value="unlisted">Não listado</option>
+                            <option value="private">Somente convidados</option>
+                            <option value="public">Público</option>
+                        </select>
+                    </label>
+                    <label class="field">
+                        <span>Qualidade</span>
+                        <select id="quality">
+                            <option value="1080">1080p · 30 fps</option>
+                            <option value="720">720p · 30 fps</option>
+                            <option value="480">480p · 30 fps</option>
+                        </select>
+                    </label>
+                </div>
+
+                <div class="device-panel">
+                    <p>DISPOSITIVOS</p>
+                    <label><span aria-hidden="true">▣</span><select id="cameraSelect" disabled aria-label="Selecionar câmera"><option value="">Ative para selecionar</option></select></label>
+                    <label><span aria-hidden="true">◉</span><select id="microphoneSelect" disabled aria-label="Selecionar microfone"><option value="">Ative para selecionar</option></select></label>
+                </div>
+
+                <div class="ready-checks" aria-label="Status da preparação">
+                    <span id="cameraCheck">○ Câmera</span>
+                    <span id="audioCheck">○ Áudio</span>
+                    <span class="checked">✓ Conexão</span>
+                </div>
+
+                <div class="viewer-status" id="viewerStatus" hidden>
+                    <span><b id="viewerCount">0</b> espectadores conectados</span>
+                    <button type="button" id="copyLink">Copiar link</button>
+                </div>
+
+                <button class="go-live-button" id="startBroadcast" type="button"><span aria-hidden="true"></span> Iniciar transmissão</button>
+                <button class="end-live-button" id="endBroadcast" type="button" hidden><span aria-hidden="true">■</span> Encerrar transmissão</button>
+
+                <a class="download-link" id="downloadRecording" href="#" download hidden>↓ Baixar gravação desta sessão</a>
+                <p class="recording-note" id="recordingNote">A sessão será gravada neste dispositivo.</p>
+            </aside>
+        </div>
+
+        <div class="trust-row">
+            <span><b>⌁</b> LiveKit ou modo local</span>
+            <span><b>◇</b> Controle no dispositivo</span>
+            <span><b>◎</b> Vídeo WebRTC</span>
+            <span><b>↓</b> Gravação para download</span>
+        </div>
+    </section>
+
+    <section class="how-it-works" id="como-funciona">
+        <p class="eyebrow"><span></span> SIMPLES DO INÍCIO AO FIM</p>
+        <h2>Da sua câmera para a tela<br />em poucos segundos.</h2>
+        <div class="steps">
+            <article><strong>01</strong><h3>Ative a câmera</h3><p>Você escolhe exatamente quando liberar vídeo e áudio.</p></article>
+            <article><strong>02</strong><h3>Ajuste os detalhes</h3><p>Defina o título, a qualidade e os dispositivos que deseja usar.</p></article>
+            <article><strong>03</strong><h3>Compartilhe o link</h3><p>Entre no ar e envie a sala para quem vai acompanhar.</p></article>
+        </div>
+    </section>
+</main>
+
+<footer>
+    <a class="brand" href="#top"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span><span>LumaCast</span></a>
+    <p>Seu estúdio, em qualquer lugar.</p>
+    <span>© 2026 LumaCast · ASP.NET Core 8</span>
+</footer>
+
+@section Scripts {
+    <script src="~/js/studio.js" asp-append-version="true"></script>
+}

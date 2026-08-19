@@ -1,0 +1,36 @@
+@page
+@model LumaCast.Pages.AssistirModel
+@{
+    ViewData["Title"] = "Assistir transmissão — LumaCast";
+}
+
+<main class="viewer-page">
+    <header class="viewer-header">
+        <a class="brand" asp-page="/Index" aria-label="Voltar ao LumaCast">
+            <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+            <span>LumaCast</span>
+        </a>
+        <span class="viewer-live-label" id="viewerLiveLabel"><i></i> CONECTANDO</span>
+    </header>
+
+    <section class="viewer-content">
+        <div class="viewer-video-shell">
+            <video id="remoteVideo" autoplay playsinline controls aria-label="Transmissão ao vivo"></video>
+            <div class="viewer-placeholder" id="viewerPlaceholder">
+                <div class="camera-orbit" aria-hidden="true"><span class="lens">●</span></div>
+                <h1 id="viewerMessage">Conectando à transmissão…</h1>
+                <p id="viewerDescription">A imagem aparecerá automaticamente quando o anfitrião entrar no ar.</p>
+                <a asp-page="/Index" id="backToStudio" hidden>Criar minha transmissão</a>
+            </div>
+        </div>
+
+        <div class="viewer-meta">
+            <div><p>AO VIVO AGORA</p><h2 id="viewerTitle">Transmissão LumaCast</h2></div>
+            <button type="button" id="viewerFullscreen">⛶ Tela cheia</button>
+        </div>
+    </section>
+</main>
+
+@section Scripts {
+    <script src="~/js/viewer.js" asp-append-version="true"></script>
+}
