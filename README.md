@@ -1,6 +1,6 @@
 # LumaCast
 
-Estúdio de transmissão ao vivo criado com **ASP.NET Core 8**, Razor Pages, WebRTC e LiveKit.
+Estúdio de transmissão ao vivo criado com **ASP.NET Core 10 LTS**, C# 14, Razor Pages, WebRTC e LiveKit.
 
 O projeto funciona em dois modos:
 
@@ -34,7 +34,19 @@ Sem credenciais, o estúdio usa automaticamente a sinalização WebSocket intern
 
 1. Crie um projeto no [LiveKit Cloud](https://cloud.livekit.io/).
 2. Copie a URL WebSocket, a API key e o API secret do projeto.
-3. Defina as variáveis no ambiente antes de iniciar a aplicação:
+3. Preencha o bloco `LiveKit` do `appsettings.json`:
+
+```json
+{
+  "LiveKit": {
+    "Url": "wss://seu-projeto.livekit.cloud",
+    "ApiKey": "sua-api-key",
+    "ApiSecret": "seu-api-secret"
+  }
+}
+```
+
+Para produção, mantenha o arquivo sem segredos e use variáveis de ambiente, que têm precedência:
 
 ```bash
 export LIVEKIT_URL="wss://seu-projeto.livekit.cloud"
@@ -43,7 +55,20 @@ export LIVEKIT_API_SECRET="seu-api-secret"
 dotnet run --launch-profile https
 ```
 
-As credenciais também podem ser fornecidas pelas chaves `LiveKit:Url`, `LiveKit:ApiKey` e `LiveKit:ApiSecret` da configuração do ASP.NET Core. Não salve segredos no repositório.
+Também são aceitas as variáveis hierárquicas padrão do ASP.NET Core: `LiveKit__Url`, `LiveKit__ApiKey` e `LiveKit__ApiSecret`. Não salve segredos reais no repositório.
+
+## Plataforma e qualidade
+
+- .NET 10 LTS e C# 14;
+- SDK fixado por `global.json`, com roll-forward controlado;
+- analisadores .NET e avisos tratados como erros;
+- lock file do NuGet para restaurações reproduzíveis;
+- rate limiting por cliente nos endpoints de salas, tokens e sinalização;
+- Problem Details para erros de API e endpoint `/healthz`;
+- ativos estáticos com fingerprint, cache imutável e compressão do ASP.NET Core 10;
+- Content Security Policy, Permissions Policy e demais cabeçalhos de segurança;
+- testes automatizados com Microsoft Testing Platform.
+- integração contínua no GitHub Actions para restauração, build, testes e auditoria de dependências.
 
 ## Segurança das salas
 

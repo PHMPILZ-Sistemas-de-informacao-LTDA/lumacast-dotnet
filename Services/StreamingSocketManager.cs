@@ -8,6 +8,8 @@ namespace LumaCast.Services;
 
 public sealed class StreamingSocketManager
 {
+    private const int MaximumSignalMessageSize = 128 * 1024;
+    private const int MaximumPeerToPeerViewers = 20;
     private readonly ConcurrentDictionary<string, StreamingRoom> _rooms = new();
     private readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web);
 
@@ -71,6 +73,13 @@ public sealed class StreamingSocketManager
             return;
         }
 
+        if (room.Viewers.Count >= MaximumPeerToPeerViewers)
+        {
+            await SendJsonAsync(socket, new { type = "full" }, cancellationToken);
+            await CloseQuietlyAsync(socket, "Sala P2P lotada", cancellationToken);
+            return;
+        }
+
         var viewer = new ViewerConnection(socket);
         room.Viewers[clientId] = viewer;
         await SendJsonAsync(socket, new { type = "connected", viewerId = clientId }, cancellationToken, viewer.SendLock);
@@ -110,6 +119,11 @@ public sealed class StreamingSocketManager
             {
                 result = await socket.ReceiveAsync(buffer, cancellationToken);
                 if (result.MessageType == WebSocketMessageType.Close) return;
+                if (messageBuffer.Length + result.Count > MaximumSignalMessageSize)
+                {
+                    await CloseQuietlyAsync(socket, "Mensagem de sinalização muito grande", cancellationToken);
+                    return;
+                }
                 messageBuffer.Write(buffer, 0, result.Count);
             } while (!result.EndOfMessage);
 

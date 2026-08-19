@@ -1,26 +1,15 @@
 using System.Text.Json.Serialization;
 using Livekit.Server.Sdk.Dotnet;
+using LumaCast.Configuration;
+using Microsoft.Extensions.Options;
 
 namespace LumaCast.Services;
 
-public sealed class LiveKitTokenService
+public sealed class LiveKitTokenService(IOptions<LiveKitOptions> options)
 {
-    private readonly string? _serverUrl;
-    private readonly string? _apiKey;
-    private readonly string? _apiSecret;
+    private readonly LiveKitOptions _options = options.Value;
 
-    public LiveKitTokenService(IConfiguration configuration)
-    {
-        _serverUrl = FirstValue(configuration["LIVEKIT_URL"], configuration["LiveKit:Url"]);
-        _apiKey = FirstValue(configuration["LIVEKIT_API_KEY"], configuration["LiveKit:ApiKey"]);
-        _apiSecret = FirstValue(configuration["LIVEKIT_API_SECRET"], configuration["LiveKit:ApiSecret"]);
-    }
-
-    public bool IsConfigured =>
-        Uri.TryCreate(_serverUrl, UriKind.Absolute, out var uri) &&
-        (uri.Scheme == "ws" || uri.Scheme == "wss") &&
-        !string.IsNullOrWhiteSpace(_apiKey) &&
-        !string.IsNullOrWhiteSpace(_apiSecret);
+    public bool IsConfigured => _options.IsConfigured;
 
     public LiveKitCredential CreateParticipantToken(
         string roomName,
@@ -28,9 +17,12 @@ public sealed class LiveKitTokenService
         string participantName,
         bool canPublish)
     {
-        if (!IsConfigured) throw new InvalidOperationException("LiveKit não está configurado.");
+        if (!IsConfigured)
+        {
+            throw new InvalidOperationException("LiveKit não está configurado.");
+        }
 
-        var token = new AccessToken(_apiKey!, _apiSecret!)
+        var token = new AccessToken(_options.ApiKey!, _options.ApiSecret!)
             .WithIdentity(identity)
             .WithName(participantName)
             .WithGrants(new VideoGrants
@@ -43,12 +35,7 @@ public sealed class LiveKitTokenService
             })
             .WithTtl(TimeSpan.FromHours(canPublish ? 6 : 3));
 
-        return new LiveKitCredential(_serverUrl!, token.ToJwt());
-    }
-
-    private static string? FirstValue(params string?[] values)
-    {
-        return values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value))?.Trim();
+        return new LiveKitCredential(_options.Url!, token.ToJwt());
     }
 }
 

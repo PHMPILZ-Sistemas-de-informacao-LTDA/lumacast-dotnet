@@ -1,0 +1,6 @@
+<Solution>
+  <Folder Name="/tests/">
+    <Project Path="tests/LumaCast.Tests/LumaCast.Tests.csproj" />
+  </Folder>
+  <Project Path="LumaCast.csproj" />
+</Solution>

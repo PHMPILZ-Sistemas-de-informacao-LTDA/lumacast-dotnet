@@ -6,13 +6,19 @@ namespace LumaCast.Services;
 public sealed class LiveKitRoomRegistry
 {
     private readonly ConcurrentDictionary<string, RoomRegistration> _rooms = new();
+    private readonly TimeProvider _timeProvider;
+
+    public LiveKitRoomRegistry(TimeProvider timeProvider)
+    {
+        _timeProvider = timeProvider;
+    }
 
     public RoomRegistration Create()
     {
         RemoveExpiredRooms();
         var roomName = $"lumacast-{Convert.ToHexString(RandomNumberGenerator.GetBytes(6)).ToLowerInvariant()}";
         var broadcastKey = Convert.ToHexString(RandomNumberGenerator.GetBytes(24)).ToLowerInvariant();
-        var registration = new RoomRegistration(roomName, broadcastKey, DateTimeOffset.UtcNow);
+        var registration = new RoomRegistration(roomName, broadcastKey, _timeProvider.GetUtcNow());
         _rooms[roomName] = registration;
         return registration;
     }
@@ -20,7 +26,7 @@ public sealed class LiveKitRoomRegistry
     public bool IsActive(string roomName)
     {
         return _rooms.TryGetValue(roomName, out var room) &&
-               room.CreatedAt > DateTimeOffset.UtcNow.AddHours(-12);
+               room.CreatedAt > _timeProvider.GetUtcNow().AddHours(-12);
     }
 
     public bool ValidateBroadcaster(string roomName, string? broadcastKey)
@@ -37,7 +43,7 @@ public sealed class LiveKitRoomRegistry
 
     private void RemoveExpiredRooms()
     {
-        var cutoff = DateTimeOffset.UtcNow.AddHours(-12);
+        var cutoff = _timeProvider.GetUtcNow().AddHours(-12);
         foreach (var room in _rooms.Where(entry => entry.Value.CreatedAt < cutoff))
         {
             _rooms.TryRemove(room.Key, out _);

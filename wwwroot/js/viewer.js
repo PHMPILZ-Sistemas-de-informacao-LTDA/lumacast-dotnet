@@ -88,6 +88,13 @@
             showOffline();
             return;
         }
+        if (payload.type === "full") {
+            showOffline(
+                "A sala atingiu o limite do modo local",
+                "Peça ao anfitrião para ativar o LiveKit e tente novamente."
+            );
+            return;
+        }
         if (payload.type === "offer") {
             if (!peer) createPeer();
             await peer.setRemoteDescription(payload.sdp);
@@ -101,12 +108,17 @@
         }
     }
 
-    function showOffline() {
+    function showOffline(customTitle, customDescription) {
+        const hasCustomMessage = typeof customTitle === "string";
         placeholder.hidden = false;
-        message.textContent = receivedMedia ? "A transmissão foi encerrada" : "Transmissão indisponível";
-        description.textContent = receivedMedia
-            ? "Obrigado por acompanhar. Você já pode fechar esta página."
-            : "O anfitrião ainda não entrou no ar ou o link não está mais ativo.";
+        message.textContent = hasCustomMessage
+            ? customTitle
+            : (receivedMedia ? "A transmissão foi encerrada" : "Transmissão indisponível");
+        description.textContent = hasCustomMessage
+            ? customDescription
+            : (receivedMedia
+                ? "Obrigado por acompanhar. Você já pode fechar esta página."
+                : "O anfitrião ainda não entrou no ar ou o link não está mais ativo.");
         backLink.hidden = false;
         liveLabel.innerHTML = "<i></i> OFFLINE";
         liveLabel.classList.remove("is-live");

@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+          cache: true
+          cache-dependency-path: '**/packages.lock.json'
+
+      - name: Restore
+        run: dotnet restore LumaCast.slnx --locked-mode
+
+      - name: Build
+        run: dotnet build LumaCast.slnx --configuration Release --no-restore
+
+      - name: Test
+        run: dotnet test LumaCast.slnx --configuration Release --no-build
+
+      - name: Audit dependencies
+        run: dotnet list LumaCast.slnx package --vulnerable --include-transitive
