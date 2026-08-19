@@ -191,7 +191,7 @@ public sealed class StreamingSocketManager
                     cancellationToken);
             }
         }
-        catch (WebSocketException)
+        catch (Exception exception) when (exception is WebSocketException or IOException or ObjectDisposedException)
         {
             // The receive loop handles disconnected clients.
         }
@@ -208,7 +208,7 @@ public sealed class StreamingSocketManager
         {
             await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, description, cancellationToken);
         }
-        catch (WebSocketException)
+        catch (Exception exception) when (exception is WebSocketException or IOException or ObjectDisposedException)
         {
             // Client already disconnected.
         }

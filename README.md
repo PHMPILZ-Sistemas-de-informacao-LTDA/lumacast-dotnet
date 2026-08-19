@@ -26,21 +26,23 @@ Aplicação web para criar transmissões ao vivo usando a câmera e o microfone 
 | Streaming | WebRTC e LiveKit |
 | SDK do servidor | `Livekit.Server.Sdk.Dotnet` 1.2.2 |
 | Cliente LiveKit | `livekit-client` 2.21.0 |
-| Testes | MSTest 4.3.3 sobre Microsoft Testing Platform |
-| Qualidade | Analisadores .NET, avisos como erros e documentação XML |
+| Testes | MSTest 4.3.3, Microsoft Testing Platform e Microsoft Code Coverage |
+| Qualidade | Analisadores .NET, cobertura mínima de 80%, avisos como erros e documentação XML |
 | Automação | GitHub Actions |
 
 As versões dos pacotes são centralizadas em `Directory.Packages.props`. O SDK utilizado pelo projeto é controlado por `global.json` e as dependências ficam fixadas pelos arquivos `packages.lock.json`.
 
 ## Solução e estrutura
 
-`LumaCast.slnx` é o arquivo de solução no formato XML moderno do .NET e contém os dois projetos:
+`LumaCast.slnx` é o arquivo de solução no formato XML moderno do .NET e contém três projetos:
 
 ```text
 LumaCast.slnx
 ├── LumaCast.csproj                 Aplicação ASP.NET Core
-└── tests/
-    └── LumaCast.Tests.csproj       Testes unitários e de integração
+├── tests/
+│   └── LumaCast.Tests.csproj       Testes unitários e de integração
+└── tools/
+    └── LumaCast.CoverageGate.csproj Verificador da cobertura mínima
 ```
 
 Principais diretórios:
@@ -51,6 +53,7 @@ Principais diretórios:
 - `Pages/`: estúdio, player e páginas Razor;
 - `Services/`: tokens, registro de salas e coordenação P2P;
 - `tests/LumaCast.Tests/`: testes de unidade e integração;
+- `tools/LumaCast.CoverageGate/`: quality gate multiplataforma para relatórios Cobertura;
 - `wwwroot/`: JavaScript, CSS e demais arquivos do navegador.
 
 ## Pré-requisitos
@@ -154,6 +157,10 @@ A suíte cobre:
 - permissões dos tokens de apresentador e espectador;
 - falha segura quando o LiveKit não está configurado;
 - leitura da seção `LiveKit` pela configuração da aplicação;
+- ciclo completo dos endpoints de salas e tokens;
+- sinalização WebSocket entre apresentador e espectadores;
+- fallback offline e rejeição de conexões inválidas;
+- renderização das Razor Pages;
 - endpoint de status, health check e cabeçalhos de segurança.
 
 Execute todos os testes pela solução:
@@ -162,13 +169,42 @@ Execute todos os testes pela solução:
 dotnet test LumaCast.slnx --configuration Release
 ```
 
+### Cobertura obrigatória
+
+O arquivo `coverage.config.json` exige no mínimo **80% de cobertura de linhas e 80% de branches**. Atualmente, a suíte possui **96,61% de linhas e 84,69% de branches**.
+
+Gere o relatório no formato Cobertura:
+
+```bash
+dotnet test tests/LumaCast.Tests/LumaCast.Tests.csproj \
+  --configuration Release \
+  --no-build \
+  -- \
+  --coverage \
+  --coverage-output coverage.cobertura.xml \
+  --coverage-output-format cobertura
+```
+
+Execute o mesmo quality gate usado pelo GitHub Actions:
+
+```bash
+dotnet run \
+  --project tools/LumaCast.CoverageGate/LumaCast.CoverageGate.csproj \
+  --configuration Release \
+  --no-build \
+  -- \
+  coverage.config.json
+```
+
+O comando retorna código de erro quando qualquer métrica fica abaixo de 80%, bloqueando o workflow. Para impedir o merge, o check `Build, test and coverage` deve ser marcado como obrigatório na proteção da branch `main` quando esse recurso estiver disponível no plano do repositório.
+
 Valide dependências conhecidas como vulneráveis:
 
 ```bash
 dotnet list LumaCast.slnx package --vulnerable --include-transitive
 ```
 
-O workflow `.github/workflows/ci.yml` executa restauração em modo bloqueado, verificação de formatação, build, testes e auditoria de dependências em cada pull request.
+O workflow `.github/workflows/ci.yml` executa restauração em modo bloqueado, verificação de formatação, build, testes com cobertura, quality gate e auditoria de dependências em cada pull request.
 
 ## Documentação do código
 
@@ -192,6 +228,51 @@ bin/Release/net10.0/LumaCast.xml
 | `GET` | `/healthz` | Informa a saúde do processo |
 
 ## Arquitetura do streaming
+
+```mermaid
+flowchart LR
+    classDef client fill:#102a28,stroke:#4fd1c5,color:#f4fffd,stroke-width:2px
+    classDef backend fill:#16213a,stroke:#7aa2ff,color:#f7f9ff,stroke-width:2px
+    classDef decision fill:#332451,stroke:#c49bff,color:#ffffff,stroke-width:2px
+    classDef media fill:#3a2416,stroke:#ffb86b,color:#fffaf4,stroke-width:2px
+    classDef config fill:#2f3338,stroke:#aeb7c2,color:#ffffff,stroke-width:2px
+
+    subgraph presenter["Dispositivo do apresentador"]
+        camera["Câmera e microfone"]:::client
+        studio["Estúdio Razor + JavaScript"]:::client
+        recorder["Gravação local"]:::client
+        camera --> studio --> recorder
+    end
+
+    subgraph server["LumaCast — ASP.NET Core 10"]
+        app["Pipeline HTTPS, segurança e rate limiting"]:::backend
+        status["Status do provedor"]:::backend
+        rooms["Salas e tokens temporários"]:::backend
+        signal["Sinalização WebSocket /signal"]:::backend
+        settings["appsettings, User Secrets ou ambiente"]:::config
+        app --> status
+        app --> rooms
+        app --> signal
+        settings --> rooms
+    end
+
+    mode{"LiveKit configurado?"}:::decision
+    livekit["LiveKit SFU / TURN"]:::media
+    viewer["Navegador do espectador"]:::client
+
+    studio -->|"HTTPS: status, sala e token"| app
+    status --> mode
+    mode -->|"Sim"| rooms
+    rooms -->|"JWT com permissões mínimas"| studio
+    rooms -->|"JWT de espectador"| viewer
+    studio -->|"Publica WebRTC"| livekit
+    livekit -->|"Distribui áudio e vídeo"| viewer
+
+    mode -->|"Não: fallback P2P"| signal
+    studio <-->|"WebSocket: SDP e ICE"| signal
+    viewer <-->|"WebSocket: SDP e ICE"| signal
+    studio -->|"WebRTC direto, até 20 espectadores"| viewer
+```
 
 No modo LiveKit, o backend cria a sala lógica e assina um token com permissões mínimas. O navegador envia a mídia para a SFU, que a distribui aos espectadores. O segredo da API permanece somente no servidor.
 
@@ -222,4 +303,5 @@ O ambiente de hospedagem deve fornecer HTTPS, encaminhar WebSockets e disponibil
 - Problem Details, health check e arquivos estáticos otimizados;
 - CSP, Permissions Policy e outros cabeçalhos de proteção;
 - mensagens WebSocket limitadas e comparação de chaves em tempo constante;
-- CI com formatação, build, testes e auditoria de dependências.
+- cobertura mínima de 80% para linhas e branches, validada localmente e no CI;
+- CI com formatação, build, testes, quality gate e auditoria de dependências.

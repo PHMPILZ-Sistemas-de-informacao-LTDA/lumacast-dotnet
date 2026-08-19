@@ -16,6 +16,9 @@ public sealed class LiveKitRoomRegistryTests
         Assert.IsTrue(registry.IsActive(room.RoomName));
         Assert.IsTrue(registry.ValidateBroadcaster(room.RoomName, room.BroadcastKey));
         Assert.IsFalse(registry.ValidateBroadcaster(room.RoomName, "invalid"));
+        Assert.IsFalse(registry.ValidateBroadcaster("missing-room", broadcastKey: null));
+        Assert.IsFalse(registry.ValidateBroadcaster("missing-room", "00"));
+        Assert.IsFalse(registry.ValidateBroadcaster(room.RoomName, "00"));
     }
 
     [TestMethod]
@@ -39,6 +42,9 @@ public sealed class LiveKitRoomRegistryTests
         timeProvider.Advance(TimeSpan.FromHours(12).Add(TimeSpan.FromSeconds(1)));
 
         Assert.IsFalse(registry.IsActive(room.RoomName));
+        var replacement = registry.Create();
+        Assert.IsTrue(registry.IsActive(replacement.RoomName));
+        Assert.IsFalse(registry.ValidateBroadcaster(room.RoomName, room.BroadcastKey));
     }
 
     private sealed class TestTimeProvider(DateTimeOffset utcNow) : TimeProvider

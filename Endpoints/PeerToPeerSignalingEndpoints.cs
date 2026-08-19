@@ -1,3 +1,4 @@
+using System.Net.WebSockets;
 using LumaCast.Services;
 
 namespace LumaCast.Endpoints;
@@ -40,6 +41,10 @@ public static class PeerToPeerSignalingEndpoints
             catch (OperationCanceledException) when (context.RequestAborted.IsCancellationRequested)
             {
                 // The browser closed the connection.
+            }
+            catch (Exception exception) when (exception is WebSocketException or IOException or ObjectDisposedException)
+            {
+                // A transport interruption is an expected end state for a WebSocket connection.
             }
 
             return Results.Empty;

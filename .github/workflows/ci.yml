@@ -10,6 +10,7 @@ permissions:
 
 jobs:
   build-and-test:
+    name: Build, test and coverage
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -33,8 +34,24 @@ jobs:
       - name: Build
         run: dotnet build LumaCast.slnx --configuration Release --no-restore
 
-      - name: Test
-        run: dotnet test LumaCast.slnx --configuration Release --no-build
+      - name: Test with coverage
+        run: >-
+          dotnet test tests/LumaCast.Tests/LumaCast.Tests.csproj
+          --configuration Release
+          --no-build
+          --
+          --coverage
+          --coverage-output coverage.cobertura.xml
+          --coverage-output-format cobertura
+
+      - name: Enforce 80% coverage
+        run: >-
+          dotnet run
+          --project tools/LumaCast.CoverageGate/LumaCast.CoverageGate.csproj
+          --configuration Release
+          --no-build
+          --
+          coverage.config.json
 
       - name: Audit dependencies
         run: dotnet list LumaCast.slnx package --vulnerable --include-transitive
