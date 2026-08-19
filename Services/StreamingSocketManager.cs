@@ -6,11 +6,25 @@ using System.Text.Json.Nodes;
 
 namespace LumaCast.Services;
 
+/// <summary>
+/// Coordena a sinalização WebRTC entre um apresentador e espectadores por WebSocket.
+/// Este serviço é o fallback local quando o LiveKit não está configurado.
+/// </summary>
 public sealed class StreamingSocketManager
 {
+    private const int MaximumSignalMessageSize = 128 * 1024;
+    private const int MaximumPeerToPeerViewers = 20;
     private readonly ConcurrentDictionary<string, StreamingRoom> _rooms = new();
     private readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web);
 
+    /// <summary>
+    /// Aceita uma conexão WebSocket validada e executa o fluxo correspondente ao papel informado.
+    /// </summary>
+    /// <param name="context">Contexto HTTP que contém a solicitação WebSocket.</param>
+    /// <param name="roomId">Identificador da sala P2P.</param>
+    /// <param name="role">Papel do cliente: <c>broadcaster</c> ou <c>viewer</c>.</param>
+    /// <param name="clientId">Identificador único do cliente na sala.</param>
+    /// <returns>Uma tarefa concluída quando a conexão é encerrada.</returns>
     public async Task HandleAsync(HttpContext context, string roomId, string role, string clientId)
     {
         using var socket = await context.WebSockets.AcceptWebSocketAsync();
@@ -71,6 +85,13 @@ public sealed class StreamingSocketManager
             return;
         }
 
+        if (room.Viewers.Count >= MaximumPeerToPeerViewers)
+        {
+            await SendJsonAsync(socket, new { type = "full" }, cancellationToken);
+            await CloseQuietlyAsync(socket, "Sala P2P lotada", cancellationToken);
+            return;
+        }
+
         var viewer = new ViewerConnection(socket);
         room.Viewers[clientId] = viewer;
         await SendJsonAsync(socket, new { type = "connected", viewerId = clientId }, cancellationToken, viewer.SendLock);
@@ -110,6 +131,11 @@ public sealed class StreamingSocketManager
             {
                 result = await socket.ReceiveAsync(buffer, cancellationToken);
                 if (result.MessageType == WebSocketMessageType.Close) return;
+                if (messageBuffer.Length + result.Count > MaximumSignalMessageSize)
+                {
+                    await CloseQuietlyAsync(socket, "Mensagem de sinalização muito grande", cancellationToken);
+                    return;
+                }
                 messageBuffer.Write(buffer, 0, result.Count);
             } while (!result.EndOfMessage);
 
@@ -165,7 +191,7 @@ public sealed class StreamingSocketManager
                     cancellationToken);
             }
         }
-        catch (WebSocketException)
+        catch (Exception exception) when (exception is WebSocketException or IOException or ObjectDisposedException)
         {
             // The receive loop handles disconnected clients.
         }
@@ -182,7 +208,7 @@ public sealed class StreamingSocketManager
         {
             await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, description, cancellationToken);
         }
-        catch (WebSocketException)
+        catch (Exception exception) when (exception is WebSocketException or IOException or ObjectDisposedException)
         {
             // Client already disconnected.
         }

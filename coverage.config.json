@@ -1,0 +1,5 @@
+{
+  "reportPath": "TestResults/coverage.cobertura.xml",
+  "minimumLineCoverage": 80,
+  "minimumBranchCoverage": 80
+}

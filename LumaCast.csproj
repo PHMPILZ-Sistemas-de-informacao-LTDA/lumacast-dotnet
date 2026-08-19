@@ -1,13 +1,15 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
+    <TargetFramework>net10.0</TargetFramework>
+    <DefaultItemExcludes>$(DefaultItemExcludes);tests/**;tools/**</DefaultItemExcludes>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <IsPackable>false</IsPackable>
+    <UserSecretsId>LumaCast-LocalDevelopment-6d97c807-9279-407f-bcf2-552e1fc0eb29</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Livekit.Server.Sdk.Dotnet" Version="1.2.2" />
+    <PackageReference Include="Livekit.Server.Sdk.Dotnet" />
   </ItemGroup>
 
 </Project>

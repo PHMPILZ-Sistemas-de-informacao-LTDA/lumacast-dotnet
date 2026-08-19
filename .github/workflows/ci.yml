@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    name: Build, test and coverage
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+          cache: true
+          cache-dependency-path: '**/packages.lock.json'
+
+      - name: Restore
+        run: dotnet restore LumaCast.slnx --locked-mode
+
+      - name: Verify formatting
+        run: dotnet format LumaCast.slnx --verify-no-changes --no-restore
+
+      - name: Build
+        run: dotnet build LumaCast.slnx --configuration Release --no-restore
+
+      - name: Test with coverage
+        run: >-
+          dotnet test tests/LumaCast.Tests/LumaCast.Tests.csproj
+          --configuration Release
+          --no-build
+          --
+          --coverage
+          --coverage-output coverage.cobertura.xml
+          --coverage-output-format cobertura
+
+      - name: Enforce 80% coverage
+        run: >-
+          dotnet run
+          --project tools/LumaCast.CoverageGate/LumaCast.CoverageGate.csproj
+          --configuration Release
+          --no-build
+          --
+          coverage.config.json
+
+      - name: Audit dependencies
+        run: dotnet list LumaCast.slnx package --vulnerable --include-transitive
