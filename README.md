@@ -196,7 +196,7 @@ dotnet run \
   coverage.config.json
 ```
 
-O comando retorna código de erro quando qualquer métrica fica abaixo de 80%, bloqueando o workflow. Para impedir o merge, o check `Build, test and coverage` deve ser marcado como obrigatório na proteção da branch `main` quando esse recurso estiver disponível no plano do repositório.
+O comando retorna código de erro quando qualquer métrica fica abaixo de 80%, bloqueando o workflow. O ruleset ativo da branch `main` exige o check `Build, test and coverage` aprovado e atualizado com a versão mais recente da branch antes do merge.
 
 Valide dependências conhecidas como vulneráveis:
 
