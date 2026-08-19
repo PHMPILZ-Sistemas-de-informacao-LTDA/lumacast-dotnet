@@ -2,8 +2,14 @@ using LumaCast.Services;
 
 namespace LumaCast.Endpoints;
 
+/// <summary>Mapeia os endpoints HTTP responsáveis por salas e credenciais LiveKit.</summary>
 public static class LiveKitEndpoints
 {
+    /// <summary>
+    /// Registra status, criação e encerramento de salas e emissão de tokens sob <c>/api/livekit</c>.
+    /// </summary>
+    /// <param name="endpoints">Construtor de rotas da aplicação.</param>
+    /// <returns>O mesmo construtor de rotas para permitir encadeamento.</returns>
     public static IEndpointRouteBuilder MapLiveKitEndpoints(this IEndpointRouteBuilder endpoints)
     {
         var group = endpoints.MapGroup("/api/livekit").WithTags("LiveKit");
@@ -79,20 +85,44 @@ public static class LiveKitEndpoints
     }
 }
 
+/// <summary>Define os nomes estáveis das políticas de rate limiting usadas pelos endpoints.</summary>
 public static class RateLimitPolicies
 {
+    /// <summary>Política aplicada à criação de salas.</summary>
     public const string RoomCreation = "livekit-room-creation";
+
+    /// <summary>Política aplicada à emissão de tokens e ao encerramento de salas.</summary>
     public const string TokenIssuance = "livekit-token-issuance";
+
+    /// <summary>Política aplicada às conexões WebSocket de sinalização.</summary>
     public const string Signaling = "p2p-signaling";
 }
 
+/// <summary>Solicitação para emitir uma credencial de participante.</summary>
+/// <param name="RoomName">Sala que o participante deseja acessar.</param>
+/// <param name="Role">Papel solicitado: apresentador ou espectador.</param>
+/// <param name="ParticipantName">Nome opcional exibido na sessão.</param>
+/// <param name="BroadcastKey">Chave obrigatória somente para o apresentador.</param>
 public sealed record LiveKitTokenRequest(
     string RoomName,
     string Role,
     string? ParticipantName,
     string? BroadcastKey);
 
+/// <summary>Solicitação autenticada para encerrar uma sala.</summary>
+/// <param name="BroadcastKey">Chave privada do apresentador.</param>
 public sealed record EndLiveKitRoomRequest(string? BroadcastKey);
+
+/// <summary>Informa ao cliente qual provedor de mídia está ativo.</summary>
+/// <param name="Configured">Indica se o LiveKit está configurado.</param>
+/// <param name="Provider">Nome do provedor selecionado.</param>
 public sealed record LiveKitStatusResponse(bool Configured, string Provider);
+
+/// <summary>Resposta devolvida ao criar uma sala LiveKit.</summary>
+/// <param name="RoomName">Nome público compartilhável da sala.</param>
+/// <param name="BroadcastKey">Chave privada que deve permanecer com o apresentador.</param>
 public sealed record LiveKitRoomResponse(string RoomName, string BroadcastKey);
+
+/// <summary>Resposta simples usada para comunicar mensagens de API.</summary>
+/// <param name="Message">Mensagem destinada ao consumidor da API.</param>
 public sealed record ApiMessage(string Message);

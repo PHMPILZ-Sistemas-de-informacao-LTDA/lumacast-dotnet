@@ -6,8 +6,18 @@ using Microsoft.AspNetCore.RateLimiting;
 
 namespace LumaCast.Infrastructure;
 
+/// <summary>
+/// Centraliza o registro dos serviços, opções e políticas de resiliência da aplicação.
+/// </summary>
 public static class ApplicationServicesExtensions
 {
+    /// <summary>
+    /// Adiciona Razor Pages, opções tipadas do LiveKit, health checks, serviços de streaming
+    /// e políticas de limitação de requisições ao contêiner de dependências.
+    /// </summary>
+    /// <param name="services">Coleção de serviços da aplicação.</param>
+    /// <param name="configuration">Configuração composta por arquivos, segredos e ambiente.</param>
+    /// <returns>A mesma coleção para permitir encadeamento.</returns>
     public static IServiceCollection AddLumaCastServices(
         this IServiceCollection services,
         IConfiguration configuration)

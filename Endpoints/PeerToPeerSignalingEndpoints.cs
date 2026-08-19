@@ -2,8 +2,17 @@ using LumaCast.Services;
 
 namespace LumaCast.Endpoints;
 
+/// <summary>
+/// Mapeia o canal WebSocket usado como sinalização WebRTC no modo ponto a ponto.
+/// </summary>
 public static class PeerToPeerSignalingEndpoints
 {
+    /// <summary>
+    /// Registra o endpoint <c>/signal</c>, valida os identificadores da sala e encaminha
+    /// a conexão ao gerenciador de sockets.
+    /// </summary>
+    /// <param name="endpoints">Construtor de rotas da aplicação.</param>
+    /// <returns>O mesmo construtor de rotas para permitir encadeamento.</returns>
     public static IEndpointRouteBuilder MapPeerToPeerSignaling(this IEndpointRouteBuilder endpoints)
     {
         endpoints.MapGet("/signal", async (HttpContext context, StreamingSocketManager manager) =>

@@ -27,6 +27,9 @@ jobs:
       - name: Restore
         run: dotnet restore LumaCast.slnx --locked-mode
 
+      - name: Verify formatting
+        run: dotnet format LumaCast.slnx --verify-no-changes --no-restore
+
       - name: Build
         run: dotnet build LumaCast.slnx --configuration Release --no-restore
 

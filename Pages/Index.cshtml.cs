@@ -1,19 +1,12 @@
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace LumaCast.Pages;
 
-public class IndexModel : PageModel
+/// <summary>Modelo da página inicial que apresenta o estúdio do transmissor.</summary>
+public sealed class IndexModel : PageModel
 {
-    private readonly ILogger<IndexModel> _logger;
-
-    public IndexModel(ILogger<IndexModel> logger)
-    {
-        _logger = logger;
-    }
-
+    /// <summary>Processa a abertura do estúdio pelo método HTTP GET.</summary>
     public void OnGet()
     {
-
     }
 }

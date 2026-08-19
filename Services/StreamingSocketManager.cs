@@ -6,6 +6,10 @@ using System.Text.Json.Nodes;
 
 namespace LumaCast.Services;
 
+/// <summary>
+/// Coordena a sinalização WebRTC entre um apresentador e espectadores por WebSocket.
+/// Este serviço é o fallback local quando o LiveKit não está configurado.
+/// </summary>
 public sealed class StreamingSocketManager
 {
     private const int MaximumSignalMessageSize = 128 * 1024;
@@ -13,6 +17,14 @@ public sealed class StreamingSocketManager
     private readonly ConcurrentDictionary<string, StreamingRoom> _rooms = new();
     private readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web);
 
+    /// <summary>
+    /// Aceita uma conexão WebSocket validada e executa o fluxo correspondente ao papel informado.
+    /// </summary>
+    /// <param name="context">Contexto HTTP que contém a solicitação WebSocket.</param>
+    /// <param name="roomId">Identificador da sala P2P.</param>
+    /// <param name="role">Papel do cliente: <c>broadcaster</c> ou <c>viewer</c>.</param>
+    /// <param name="clientId">Identificador único do cliente na sala.</param>
+    /// <returns>Uma tarefa concluída quando a conexão é encerrada.</returns>
     public async Task HandleAsync(HttpContext context, string roomId, string role, string clientId)
     {
         using var socket = await context.WebSockets.AcceptWebSocketAsync();

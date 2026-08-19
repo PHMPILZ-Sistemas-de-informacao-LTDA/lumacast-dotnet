@@ -1,7 +1,16 @@
 namespace LumaCast.Infrastructure;
 
+/// <summary>
+/// Fornece o middleware com os cabeçalhos HTTP de proteção adotados pelo LumaCast.
+/// </summary>
 public static class SecurityHeadersExtensions
 {
+    /// <summary>
+    /// Adiciona CSP, Permissions Policy e proteções contra MIME sniffing e incorporação em frames.
+    /// Deve ser chamado antes do mapeamento dos endpoints.
+    /// </summary>
+    /// <param name="app">Pipeline HTTP da aplicação.</param>
+    /// <returns>O pipeline configurado.</returns>
     public static IApplicationBuilder UseLumaCastSecurityHeaders(this IApplicationBuilder app)
     {
         return app.Use(async (context, next) =>

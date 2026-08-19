@@ -35,4 +35,8 @@ app.MapRazorPages();
 
 app.Run();
 
+/// <summary>
+/// Ponto de entrada da aplicação, exposto como tipo parcial para permitir testes de integração
+/// com <c>WebApplicationFactory</c>.
+/// </summary>
 public partial class Program;

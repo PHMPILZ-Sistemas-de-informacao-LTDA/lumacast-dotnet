@@ -1,91 +1,225 @@
 # LumaCast
 
-Estúdio de transmissão ao vivo criado com **ASP.NET Core 10 LTS**, C# 14, Razor Pages, WebRTC e LiveKit.
+Aplicação web para criar transmissões ao vivo usando a câmera e o microfone do dispositivo. O backend é construído com ASP.NET Core 10 e entrega dois modos de transporte:
 
-O projeto funciona em dois modos:
+- **LiveKit SFU (recomendado para produção):** oferece sinalização, TURN e distribuição de mídia escalável;
+- **WebRTC P2P:** fallback automático para desenvolvimento e salas pequenas quando o LiveKit não está configurado.
 
-- **LiveKit SFU (recomendado):** sinalização, TURN e distribuição escalável para vários espectadores;
-- **P2P local:** fallback automático para desenvolvimento quando o LiveKit ainda não está configurado.
+## Funcionalidades
 
-## Recursos
-
-- acesso à câmera e ao microfone do dispositivo;
-- pré-visualização antes de entrar no ar;
-- seleção de câmera, microfone e qualidade;
-- sala ao vivo com link compartilhável;
-- página exclusiva para espectadores;
+- pré-visualização da câmera antes de iniciar a transmissão;
+- seleção de câmera, microfone e qualidade de vídeo;
+- link compartilhável e página exclusiva para espectadores;
 - contagem de espectadores conectados;
-- gravação local com download ao encerrar;
-- tokens separados para apresentador e espectadores;
-- chave secreta do LiveKit mantida somente no backend.
+- gravação local da transmissão com download ao encerrar;
+- tokens LiveKit separados para apresentador e espectador;
+- chave do apresentador gerada de forma criptograficamente segura;
+- fallback WebRTC com sinalização WebSocket interna;
+- endpoint de saúde, rate limiting e cabeçalhos HTTP de segurança.
 
-## Executar em modo local
+## Tecnologias
 
-```bash
-dotnet restore
-dotnet run --launch-profile https
+| Área | Tecnologia |
+| --- | --- |
+| Plataforma | .NET 10 LTS e C# 14 |
+| Backend | ASP.NET Core 10, Razor Pages e Minimal APIs |
+| Streaming | WebRTC e LiveKit |
+| SDK do servidor | `Livekit.Server.Sdk.Dotnet` 1.2.2 |
+| Cliente LiveKit | `livekit-client` 2.21.0 |
+| Testes | MSTest 4.3.3 sobre Microsoft Testing Platform |
+| Qualidade | Analisadores .NET, avisos como erros e documentação XML |
+| Automação | GitHub Actions |
+
+As versões dos pacotes são centralizadas em `Directory.Packages.props`. O SDK utilizado pelo projeto é controlado por `global.json` e as dependências ficam fixadas pelos arquivos `packages.lock.json`.
+
+## Solução e estrutura
+
+`LumaCast.slnx` é o arquivo de solução no formato XML moderno do .NET e contém os dois projetos:
+
+```text
+LumaCast.slnx
+├── LumaCast.csproj                 Aplicação ASP.NET Core
+└── tests/
+    └── LumaCast.Tests.csproj       Testes unitários e de integração
 ```
 
-Abra o endereço HTTPS exibido no terminal. O navegador exige HTTPS para acessar câmera e microfone fora de `localhost`.
+Principais diretórios:
 
-Sem credenciais, o estúdio usa automaticamente a sinalização WebSocket interna e conexões WebRTC ponto a ponto.
+- `Configuration/`: opções tipadas e validação da configuração LiveKit;
+- `Endpoints/`: endpoints HTTP do LiveKit e sinalização WebSocket;
+- `Infrastructure/`: registro de dependências, rate limiting e segurança HTTP;
+- `Pages/`: estúdio, player e páginas Razor;
+- `Services/`: tokens, registro de salas e coordenação P2P;
+- `tests/LumaCast.Tests/`: testes de unidade e integração;
+- `wwwroot/`: JavaScript, CSS e demais arquivos do navegador.
 
-## Configurar o LiveKit Cloud
+## Pré-requisitos
 
-1. Crie um projeto no [LiveKit Cloud](https://cloud.livekit.io/).
-2. Copie a URL WebSocket, a API key e o API secret do projeto.
-3. Preencha o bloco `LiveKit` do `appsettings.json`:
+- SDK .NET `10.0.400` ou uma feature band compatível aceita pelo `global.json`;
+- navegador moderno com suporte a WebRTC;
+- HTTPS para câmera e microfone quando o acesso não ocorrer por `localhost`;
+- projeto no LiveKit Cloud ou servidor LiveKit próprio para o modo escalável.
+
+Confirme o ambiente instalado:
+
+```bash
+dotnet --version
+dotnet sln LumaCast.slnx list
+```
+
+## Configuração do LiveKit
+
+As chaves estão declaradas no `appsettings.json` sem valores reais:
 
 ```json
 {
   "LiveKit": {
-    "Url": "wss://seu-projeto.livekit.cloud",
-    "ApiKey": "sua-api-key",
-    "ApiSecret": "seu-api-secret"
+    "Url": "",
+    "ApiKey": "",
+    "ApiSecret": ""
   }
 }
 ```
 
-Para produção, mantenha o arquivo sem segredos e use variáveis de ambiente, que têm precedência:
+| Chave .NET | Variável hierárquica | Variável compatível | Obrigatória |
+| --- | --- | --- | --- |
+| `LiveKit:Url` | `LiveKit__Url` | `LIVEKIT_URL` | Sim, com `ws://` ou `wss://` |
+| `LiveKit:ApiKey` | `LiveKit__ApiKey` | `LIVEKIT_API_KEY` | Sim |
+| `LiveKit:ApiSecret` | `LiveKit__ApiSecret` | `LIVEKIT_API_SECRET` | Sim |
+
+Os três valores devem ser fornecidos em conjunto. Se todos estiverem vazios, a aplicação inicia normalmente no modo P2P. Se apenas parte da configuração for informada ou a URL for inválida, a inicialização falha com uma mensagem de validação.
+
+### Desenvolvimento com User Secrets
+
+Esta é a forma recomendada de configurar credenciais localmente sem modificar arquivos versionados:
 
 ```bash
-export LIVEKIT_URL="wss://seu-projeto.livekit.cloud"
-export LIVEKIT_API_KEY="sua-api-key"
-export LIVEKIT_API_SECRET="seu-api-secret"
-dotnet run --launch-profile https
+dotnet user-secrets set "LiveKit:Url" "wss://seu-projeto.livekit.cloud" --project LumaCast.csproj
+dotnet user-secrets set "LiveKit:ApiKey" "sua-api-key" --project LumaCast.csproj
+dotnet user-secrets set "LiveKit:ApiSecret" "seu-api-secret" --project LumaCast.csproj
+dotnet user-secrets list --project LumaCast.csproj
 ```
 
-Também são aceitas as variáveis hierárquicas padrão do ASP.NET Core: `LiveKit__Url`, `LiveKit__ApiKey` e `LiveKit__ApiSecret`. Não salve segredos reais no repositório.
+Para remover as credenciais locais:
 
-## Plataforma e qualidade
+```bash
+dotnet user-secrets clear --project LumaCast.csproj
+```
 
-- .NET 10 LTS e C# 14;
-- SDK fixado por `global.json`, com roll-forward controlado;
-- analisadores .NET e avisos tratados como erros;
-- lock file do NuGet para restaurações reproduzíveis;
-- rate limiting por cliente nos endpoints de salas, tokens e sinalização;
-- Problem Details para erros de API e endpoint `/healthz`;
-- ativos estáticos com fingerprint, cache imutável e compressão do ASP.NET Core 10;
-- Content Security Policy, Permissions Policy e demais cabeçalhos de segurança;
-- testes automatizados com Microsoft Testing Platform.
-- integração contínua no GitHub Actions para restauração, build, testes e auditoria de dependências.
+### Variáveis de ambiente
 
-## Segurança das salas
+Em produção, use um cofre de segredos ou variáveis do ambiente de execução:
 
-O backend cria uma chave aleatória exclusiva para o apresentador. Tokens de espectadores possuem somente permissão para entrar e assistir; eles não podem publicar áudio, vídeo ou dados. As salas expiram no registro local após 12 horas.
+```bash
+export LiveKit__Url="wss://seu-projeto.livekit.cloud"
+export LiveKit__ApiKey="sua-api-key"
+export LiveKit__ApiSecret="sua-api-secret"
+```
 
-Para uma aplicação pública, acrescente autenticação de usuários e persistência distribuída para o registro das salas.
+As variáveis legadas em letras maiúsculas mostradas na tabela também são aceitas e sobrescrevem os valores da seção. Nunca envie `ApiSecret` ao navegador nem salve credenciais reais no Git.
 
-## Arquitetura
+## Restaurar, compilar e executar
 
-- `Pages/Index.cshtml`: estúdio do apresentador;
-- `Pages/Assistir.cshtml`: player dos espectadores;
-- `Services/LiveKitTokenService.cs`: tokens JWT e permissões do LiveKit;
-- `Services/LiveKitRoomRegistry.cs`: salas e chaves temporárias do apresentador;
-- `Services/StreamingSocketManager.cs`: fallback de sinalização WebSocket;
-- `wwwroot/js/studio.js`: captura, publicação e gravação;
-- `wwwroot/js/viewer.js`: recepção da transmissão.
+Restaure a solução usando as versões fixadas:
 
-## Escalabilidade
+```bash
+dotnet restore LumaCast.slnx --locked-mode
+```
 
-Com LiveKit, os espectadores recebem a mídia pela SFU em vez de abrir uma conexão direta com o apresentador. Para gravação no servidor, retransmissão RTMP ou armazenamento permanente, o próximo passo é configurar o [LiveKit Egress](https://docs.livekit.io/home/egress/overview/).
+Compile todos os projetos:
+
+```bash
+dotnet build LumaCast.slnx --configuration Release --no-restore
+```
+
+Execute a aplicação em desenvolvimento:
+
+```bash
+dotnet run --project LumaCast.csproj --launch-profile https
+```
+
+Abra `https://localhost:7271`. O endereço HTTP `http://localhost:5008` também é criado pelo perfil, mas o HTTPS deve ser preferido para testar permissões de mídia.
+
+Na primeira execução local, confie no certificado de desenvolvimento se necessário:
+
+```bash
+dotnet dev-certs https --trust
+```
+
+## Testes
+
+A suíte cobre:
+
+- criação, validação, encerramento e expiração de salas;
+- permissões dos tokens de apresentador e espectador;
+- falha segura quando o LiveKit não está configurado;
+- leitura da seção `LiveKit` pela configuração da aplicação;
+- endpoint de status, health check e cabeçalhos de segurança.
+
+Execute todos os testes pela solução:
+
+```bash
+dotnet test LumaCast.slnx --configuration Release
+```
+
+Valide dependências conhecidas como vulneráveis:
+
+```bash
+dotnet list LumaCast.slnx package --vulnerable --include-transitive
+```
+
+O workflow `.github/workflows/ci.yml` executa restauração em modo bloqueado, verificação de formatação, build, testes e auditoria de dependências em cada pull request.
+
+## Documentação do código
+
+As classes públicas e os métodos principais possuem comentários XML com resumo, parâmetros, retornos e condições de erro. A documentação é verificada durante o build porque os avisos são tratados como erros.
+
+O arquivo XML gerado pode ser encontrado após a compilação em:
+
+```text
+bin/Release/net10.0/LumaCast.xml
+```
+
+## Endpoints
+
+| Método | Caminho | Uso |
+| --- | --- | --- |
+| `GET` | `/api/livekit/status` | Informa se o provedor ativo é LiveKit ou P2P |
+| `POST` | `/api/livekit/rooms` | Cria uma sala e devolve a chave do apresentador |
+| `POST` | `/api/livekit/token` | Emite uma credencial temporária de participante |
+| `POST` | `/api/livekit/rooms/{roomName}/end` | Encerra uma sala autenticada |
+| `GET` | `/signal` | Estabelece a conexão WebSocket usada na sinalização P2P |
+| `GET` | `/healthz` | Informa a saúde do processo |
+
+## Arquitetura do streaming
+
+No modo LiveKit, o backend cria a sala lógica e assina um token com permissões mínimas. O navegador envia a mídia para a SFU, que a distribui aos espectadores. O segredo da API permanece somente no servidor.
+
+No modo P2P, o backend troca ofertas, respostas e candidatos ICE por WebSocket. Cada espectador recebe uma conexão direta do apresentador; por isso esse modo é limitado a 20 espectadores e deve ser usado apenas para desenvolvimento ou salas pequenas.
+
+As salas ficam em memória e expiram após 12 horas. Para executar várias instâncias da aplicação, substitua o registro em memória por armazenamento distribuído e adicione autenticação de usuários.
+
+## Publicação
+
+Gere os artefatos otimizados:
+
+```bash
+dotnet publish LumaCast.csproj --configuration Release --output artifacts/publish
+```
+
+O ambiente de hospedagem deve fornecer HTTPS, encaminhar WebSockets e disponibilizar as três configurações LiveKit. Para gravação no servidor, retransmissão RTMP ou armazenamento permanente, configure o [LiveKit Egress](https://docs.livekit.io/home/egress/overview/).
+
+## Práticas adotadas
+
+- nullable reference types e implicit usings habilitados;
+- formatação consistente definida no `.editorconfig`;
+- C# 14 e SDK controlados centralmente;
+- versões de pacotes centralizadas e lock files versionados;
+- analisadores no nível `latest-recommended` e avisos tratados como erros;
+- opções LiveKit tipadas, validadas na inicialização e cobertas por testes;
+- `TimeProvider` para testes determinísticos de expiração;
+- rate limiting por cliente em criação de salas, tokens e sinalização;
+- Problem Details, health check e arquivos estáticos otimizados;
+- CSP, Permissions Policy e outros cabeçalhos de proteção;
+- mensagens WebSocket limitadas e comparação de chaves em tempo constante;
+- CI com formatação, build, testes e auditoria de dependências.

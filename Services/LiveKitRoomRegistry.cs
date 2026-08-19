@@ -3,16 +3,24 @@ using System.Security.Cryptography;
 
 namespace LumaCast.Services;
 
+/// <summary>
+/// Mantém em memória as salas LiveKit ativas e suas chaves de apresentador.
+/// Adequado para uma única instância; produção distribuída deve usar armazenamento compartilhado.
+/// </summary>
 public sealed class LiveKitRoomRegistry
 {
     private readonly ConcurrentDictionary<string, RoomRegistration> _rooms = new();
     private readonly TimeProvider _timeProvider;
 
+    /// <summary>Inicializa o registro com uma fonte de tempo substituível em testes.</summary>
+    /// <param name="timeProvider">Fonte usada para criação e expiração das salas.</param>
     public LiveKitRoomRegistry(TimeProvider timeProvider)
     {
         _timeProvider = timeProvider;
     }
 
+    /// <summary>Cria uma sala com nome e chave criptograficamente aleatórios.</summary>
+    /// <returns>O registro que deve ser entregue somente ao apresentador.</returns>
     public RoomRegistration Create()
     {
         RemoveExpiredRooms();
@@ -23,18 +31,29 @@ public sealed class LiveKitRoomRegistry
         return registration;
     }
 
+    /// <summary>Verifica se a sala existe e ainda está dentro do período de 12 horas.</summary>
+    /// <param name="roomName">Nome da sala.</param>
+    /// <returns><see langword="true"/> quando a sala pode receber participantes.</returns>
     public bool IsActive(string roomName)
     {
         return _rooms.TryGetValue(roomName, out var room) &&
                room.CreatedAt > _timeProvider.GetUtcNow().AddHours(-12);
     }
 
+    /// <summary>Compara em tempo constante a chave fornecida com a chave da sala.</summary>
+    /// <param name="roomName">Nome da sala.</param>
+    /// <param name="broadcastKey">Chave apresentada pelo transmissor.</param>
+    /// <returns><see langword="true"/> quando a chave é autêntica.</returns>
     public bool ValidateBroadcaster(string roomName, string? broadcastKey)
     {
         if (broadcastKey is null || !_rooms.TryGetValue(roomName, out var room)) return false;
         return FixedTimeEquals(room.BroadcastKey, broadcastKey);
     }
 
+    /// <summary>Encerra uma sala quando a chave do apresentador é válida.</summary>
+    /// <param name="roomName">Nome da sala.</param>
+    /// <param name="broadcastKey">Chave apresentada pelo transmissor.</param>
+    /// <returns><see langword="true"/> quando a sala foi removida.</returns>
     public bool End(string roomName, string? broadcastKey)
     {
         if (!ValidateBroadcaster(roomName, broadcastKey)) return false;
@@ -68,4 +87,8 @@ public sealed class LiveKitRoomRegistry
     }
 }
 
+/// <summary>Representa uma sala temporária registrada pelo backend.</summary>
+/// <param name="RoomName">Nome aleatório da sala LiveKit.</param>
+/// <param name="BroadcastKey">Chave privada usada para autenticar o apresentador.</param>
+/// <param name="CreatedAt">Instante UTC em que o registro foi criado.</param>
 public sealed record RoomRegistration(string RoomName, string BroadcastKey, DateTimeOffset CreatedAt);
